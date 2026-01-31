@@ -1,20 +1,21 @@
 import {
   Controller,
   Post,
-  Param,
-  Delete,
   UseInterceptors,
   UploadedFile,
   UseGuards,
-  BadRequestException,
   ParseFilePipe,
   FileTypeValidator,
   MaxFileSizeValidator,
+  Get,
+  Param,
+  Query,
 } from '@nestjs/common';
 import { ImagesService } from './images.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { User } from 'src/decorators/user.decorator';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 @UseGuards(AuthGuard)
 @Controller('images')
@@ -40,5 +41,15 @@ export class ImagesController {
     file: Express.Multer.File,
   ) {
     return this.imagesService.uploadFile(userId, file);
+  }
+
+  @Get()
+  getAll(@User() userId, @Query() query: PaginationQueryDto) {
+    return this.imagesService.getAll(userId, query);
+  }
+
+  @Get(':id')
+  getFile(@User() userId, @Param('id') id: string) {
+    return this.imagesService.getFile(userId, id);
   }
 }
