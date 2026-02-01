@@ -8,8 +8,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { isValidObjectId, Model } from 'mongoose';
 import { Image } from './entities/image.entity';
 import { AwsS3Service } from 'src/aws-s3/aws-s3.service';
-import { randomUUID } from 'crypto';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { TransformImageDto } from './dto/transform-image.dto';
+import sharp from 'sharp';
 
 @Injectable()
 export class ImagesService {
@@ -24,7 +25,7 @@ export class ImagesService {
     }
 
     const ext = file.mimetype.split('/')[1];
-    const fileId = `image-processing-service/${randomUUID()}.${ext}`;
+    const fileId = `image-processing-service/${userId}.${ext}`;
     const url = await this.awsS3Service.uploadFile(fileId, file.buffer);
 
     const image = await this.imageModel.create({
@@ -62,5 +63,43 @@ export class ImagesService {
       .limit(limit);
 
     return images;
+  }
+
+  async getFileContent(filId) {
+    return await this.awsS3Service.getFile(filId);
+  }
+
+  async transform(userId, id, transformImageDto: TransformImageDto) {
+    const image = await this.imageModel.findOne({
+      _id: id,
+      userId: userId,
+    });
+    if (!image) throw new NotFoundException('image not found');
+
+    const buffer = await this.awsS3Service.getFile(id);
+    let sharpImage = sharp(buffer);
+    const { transformations } = transformImageDto;
+
+    if (transformations.resize) {
+      sharpImage = sharpImage.resize(
+        transformations.resize.width,
+
+        transformations.resize.height,
+      );
+    }
+
+    const ext = image.mimetype.split('/')[1];
+    const newKey = `image-processing-service/${userId}.${ext}`;
+    const url = await this.awsS3Service.uploadFile(id, buffer);
+
+    const transformedImage = await this.imageModel.create({
+      userId,
+      url,
+      key: newKey,
+      size: image.size,
+      mimetype: image.mimetype,
+    });
+
+    return transformedImage;
   }
 }

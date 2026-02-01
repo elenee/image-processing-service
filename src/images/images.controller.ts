@@ -10,12 +10,14 @@ import {
   Get,
   Param,
   Query,
+  Body,
 } from '@nestjs/common';
 import { ImagesService } from './images.service';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { User } from 'src/decorators/user.decorator';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { TransformImageDto } from './dto/transform-image.dto';
 
 @UseGuards(AuthGuard)
 @Controller('images')
@@ -43,6 +45,11 @@ export class ImagesController {
     return this.imagesService.uploadFile(userId, file);
   }
 
+  @Post('getfile')
+  getFileContent(@Body('fileId') fileId: string) {
+    return this.imagesService.getFileContent(fileId);
+  }
+
   @Get()
   getAll(@User() userId, @Query() query: PaginationQueryDto) {
     return this.imagesService.getAll(userId, query);
@@ -51,5 +58,14 @@ export class ImagesController {
   @Get(':id')
   getFile(@User() userId, @Param('id') id: string) {
     return this.imagesService.getFile(userId, id);
+  }
+
+  @Post(':id/transform')
+  transform(
+    userId,
+    @Param('id') id: string,
+    @Body() transformImageDto: TransformImageDto,
+  ) {
+    return this.imagesService.transform(userId, id, transformImageDto);
   }
 }

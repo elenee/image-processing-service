@@ -1,5 +1,10 @@
 import { BadRequestException, Body, Injectable } from '@nestjs/common';
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
+import { Readable } from 'node:stream';
 
 @Injectable()
 export class AwsS3Service {
@@ -31,5 +36,30 @@ export class AwsS3Service {
     await this.s3.send(command);
 
     return `https://${this.bucketName}.s3.amazonaws.com/${filePath}`;
+  }
+
+  async getFile(filId) {
+    if (!filId) throw new BadRequestException('FileId is required');
+
+    const config = {
+      Key: filId,
+      Bucket: this.bucketName,
+    };
+
+    const command = new GetObjectCommand(config);
+    const fileStream = await this.s3.send(command);
+
+    if (fileStream.Body instanceof Readable) {
+      const chunks: Buffer[] = [];
+      for await (let chunk of fileStream.Body) {
+        chunks.push(chunk);
+      }
+      const fileBuffer = Buffer.concat(chunks);
+      const base64 = fileBuffer.toString('base64');
+      const file = `data:${fileStream.ContentType};base64,${base64}`;
+      return file;
+    }
+    console.log('Body is not Readable, returning null');
+    throw new BadRequestException('File body is not readable');
   }
 }
