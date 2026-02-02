@@ -59,7 +59,24 @@ export class AwsS3Service {
       const file = `data:${fileStream.ContentType};base64,${base64}`;
       return file;
     }
-    console.log('Body is not Readable, returning null');
-    throw new BadRequestException('File body is not readable');
+  }
+
+  async getFileBuffer(filId) {
+    if (!filId) throw new BadRequestException('FileId is required');
+
+    const config = {
+      Key: filId,
+      Bucket: this.bucketName,
+    };
+
+    const command = new GetObjectCommand(config);
+    const res = await this.s3.send(command);
+
+    const chunks: Buffer[] = [];
+    for await (let chunk of res.Body) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+    return buffer;
   }
 }

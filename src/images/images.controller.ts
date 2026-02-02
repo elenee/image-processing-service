@@ -62,7 +62,7 @@ export class ImagesController {
 
   @Post(':id/transform')
   transform(
-    userId,
+    @User() userId,
     @Param('id') id: string,
     @Body() transformImageDto: TransformImageDto,
   ) {
