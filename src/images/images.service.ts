@@ -100,6 +100,12 @@ export class ImagesService {
       });
     }
     if (transformations.format) {
+      const validFormats = ['jpeg', 'png', 'webp', 'gif', 'tiff', 'avif'];
+
+      if (!validFormats.includes(transformations.format)) {
+        throw new BadRequestException('Unsupported format.');
+      }
+
       sharpImage = sharpImage.toFormat(
         transformations.format as keyof FormatEnum,
       );
@@ -113,6 +119,21 @@ export class ImagesService {
         [0.299, 0.587, 0.114],
         [0.2392, 0.4696, 0.0912],
       ]);
+    }
+
+    if (transformations.flip) {
+      sharpImage = sharpImage.flip();
+    }
+    if (transformations.mirror) {
+      sharpImage = sharpImage.flop();
+    }
+    if (transformations.compress) {
+      sharpImage = sharpImage.jpeg({ quality: transformations.compress });
+
+      sharpImage = sharpImage.png({
+        quality: transformations.compress,
+        compressionLevel: 9,
+      });
     }
 
     const transformedBuffer = await sharpImage.toBuffer();

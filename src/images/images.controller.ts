@@ -31,7 +31,9 @@ export class ImagesController {
     @UploadedFile(
       new ParseFilePipe({
         validators: [
-          new FileTypeValidator({ fileType: 'image/(png|jpeg)' }),
+          new FileTypeValidator({
+            fileType: /image\/(png|jpeg|jpg|gif|webp|bmp|tiff)/,
+          }),
           new MaxFileSizeValidator({
             maxSize: 10 * 1024 * 1024,
             message: 'File is too large. Max file size is 10MB',
