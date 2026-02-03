@@ -18,6 +18,7 @@ import { User } from 'src/decorators/user.decorator';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { TransformImageDto } from './dto/transform-image.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @UseGuards(AuthGuard)
 @Controller('images')
@@ -25,6 +26,7 @@ export class ImagesController {
   constructor(private readonly imagesService: ImagesService) {}
 
   @Post()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @UseInterceptors(FileInterceptor('file'))
   uploadFile(
     @User() userId,
@@ -63,6 +65,7 @@ export class ImagesController {
   }
 
   @Post(':id/transform')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   transform(
     @User() userId,
     @Param('id') id: string,
