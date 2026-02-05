@@ -11,6 +11,8 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
+import {CacheModule} from '@nestjs/cache-manager'
+import { RedisOptions } from './configs/app-options.constants';
 
 @Module({
   imports: [
@@ -27,6 +29,7 @@ import { APP_GUARD } from '@nestjs/core';
         },
       ],
     }),
+    CacheModule.registerAsync(RedisOptions),
     UsersModule,
     AuthModule,
     AwsS3Module,

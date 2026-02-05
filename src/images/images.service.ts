@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -12,12 +13,15 @@ import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { TransformImageDto } from './dto/transform-image.dto';
 import sharp from 'sharp';
 import type { FormatEnum } from 'sharp';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import type { Cache } from 'cache-manager';
 
 @Injectable()
 export class ImagesService {
   constructor(
     @InjectModel('Image') private imageModel: Model<Image>,
     private awsS3Service: AwsS3Service,
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
   ) {}
 
   async uploadFile(userId, file: Express.Multer.File) {
@@ -54,8 +58,12 @@ export class ImagesService {
   }
 
   async getAll(userId, query: PaginationQueryDto) {
+    const cacheKey = `images:${userId}:page${query.page}:limit${query.limit}`;
     let { page = 1, limit = 10 } = query;
     if (limit > 10) limit = 10;
+
+    const cached = await this.cacheManager.get(cacheKey);
+    if (cached) return cached;
 
     const skip = (page - 1) * limit;
     const images = await this.imageModel
@@ -63,6 +71,7 @@ export class ImagesService {
       .skip(skip)
       .limit(limit);
 
+    await this.cacheManager.set(cacheKey, images);
     return images;
   }
 
