@@ -11,8 +11,9 @@ import { MulterModule } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import {CacheModule} from '@nestjs/cache-manager'
-import { RedisOptions } from './configs/app-options.constants';
+import { RedisService } from './redis/redis.service';
+import { RedisModule } from './redis/redis.module';
+
 
 @Module({
   imports: [
@@ -29,11 +30,11 @@ import { RedisOptions } from './configs/app-options.constants';
         },
       ],
     }),
-    CacheModule.registerAsync(RedisOptions),
     UsersModule,
     AuthModule,
     AwsS3Module,
     ImagesModule,
+    RedisModule,
   ],
   controllers: [AppController],
   providers: [
@@ -42,6 +43,7 @@ import { RedisOptions } from './configs/app-options.constants';
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },
+    RedisService,
   ],
 })
 export class AppModule {}

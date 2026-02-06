@@ -11,6 +11,7 @@ import {
   Param,
   Query,
   Body,
+  Delete,
 } from '@nestjs/common';
 import { ImagesService } from './images.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -72,5 +73,10 @@ export class ImagesController {
     @Body() transformImageDto: TransformImageDto,
   ) {
     return this.imagesService.transform(userId, id, transformImageDto);
+  }
+
+  @Delete(':id')
+  removeImage(@User() userId, @Param('id') id: string) {
+    return this.imagesService.deleteImage(userId, id);
   }
 }

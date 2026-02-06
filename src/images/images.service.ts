@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -13,15 +12,14 @@ import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { TransformImageDto } from './dto/transform-image.dto';
 import sharp from 'sharp';
 import type { FormatEnum } from 'sharp';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
+import { RedisService } from 'src/redis/redis.service';
 
 @Injectable()
 export class ImagesService {
   constructor(
     @InjectModel('Image') private imageModel: Model<Image>,
     private awsS3Service: AwsS3Service,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private redisService: RedisService,
   ) {}
 
   async uploadFile(userId, file: Express.Multer.File) {
@@ -42,6 +40,8 @@ export class ImagesService {
       mimetype: file.mimetype,
     });
 
+    const versionKey = `user:${userId}:version`;
+    await this.redisService.incr(versionKey);
     return image;
   }
 
@@ -49,29 +49,51 @@ export class ImagesService {
     if (!isValidObjectId(userId) || !isValidObjectId(imageId)) {
       throw new BadRequestException();
     }
-    const image = await this.imageModel.findOne({
-      _id: imageId,
-      userId: userId,
-    });
+    const cacheKey = `userId:${userId}:imageId:${imageId}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      console.log('returning from redis');
+      return JSON.parse(cached);
+    }
+
+    const image = await this.imageModel
+      .findOne({
+        _id: imageId,
+        userId: userId,
+      })
+      .lean();
     if (!image) throw new NotFoundException('image not found');
+
+    await this.redisService.set(cacheKey, JSON.stringify(image), 300);
     return image;
   }
 
   async getAll(userId, query: PaginationQueryDto) {
-    const cacheKey = `images:${userId}:page${query.page}:limit${query.limit}`;
     let { page = 1, limit = 10 } = query;
     if (limit > 10) limit = 10;
-
-    const cached = await this.cacheManager.get(cacheKey);
-    if (cached) return cached;
-
     const skip = (page - 1) * limit;
+
+    const versionKey = `user:${userId}:version`;
+    let version = await this.redisService.get(versionKey);
+    if (!version) {
+      version = '1';
+      await this.redisService.set(versionKey, version);
+    }
+
+    const cacheKey = `images:${userId}:v:${version}:page${query.page}:limit${query.limit}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      console.log('returning from redis');
+      return JSON.parse(cached);
+    }
+
+    console.log('quering db');
     const images = await this.imageModel
       .find({ userId: userId })
       .skip(skip)
       .limit(limit);
 
-    await this.cacheManager.set(cacheKey, images);
+    await this.redisService.set(cacheKey, JSON.stringify(images), 300);
     return images;
   }
 
@@ -79,9 +101,17 @@ export class ImagesService {
     return await this.awsS3Service.getFile(filId);
   }
 
-  async transform(userId, id, transformImageDto: TransformImageDto) {
+  async transform(userId, imageId, transformImageDto: TransformImageDto) {
+    const cacheKey = `imageId:${imageId}:transformations:${JSON.stringify(transformImageDto.transformations)}`;
+    const cached = await this.redisService.get(cacheKey);
+    if (cached) {
+      console.log('returning from redis');
+      return JSON.parse(cached);
+    }
+
+    console.log('quering db');
     const image = await this.imageModel.findOne({
-      _id: id,
+      _id: imageId,
       userId: userId,
     });
     if (!image) throw new NotFoundException('image not found');
@@ -163,6 +193,24 @@ export class ImagesService {
       mimetype: mimeType,
     });
 
+    await this.redisService.set(
+      cacheKey,
+      JSON.stringify(transformedImage.toObject()),
+      300,
+    );
     return transformedImage;
+  }
+
+  async deleteImage(userId, imageId) {
+    const image = await this.imageModel.findOneAndDelete({
+      _id: imageId,
+      userId: userId,
+    });
+    if (!image) throw new BadRequestException();
+
+    await this.awsS3Service.deleteFile(image.key);
+    await this.redisService.delete(`userId:${userId}:imageId:${imageId}`);
+    await this.redisService.incr(`user:${userId}:version`);
+    return 'image deleted successfully';
   }
 }

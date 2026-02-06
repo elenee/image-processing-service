@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Injectable } from '@nestjs/common';
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -61,11 +62,11 @@ export class AwsS3Service {
     }
   }
 
-  async getFileBuffer(filId) {
-    if (!filId) throw new BadRequestException('FileId is required');
+  async getFileBuffer(fileId) {
+    if (!fileId) throw new BadRequestException('FileId is required');
 
     const config = {
-      Key: filId,
+      Key: fileId,
       Bucket: this.bucketName,
     };
 
@@ -78,5 +79,16 @@ export class AwsS3Service {
     }
     const buffer = Buffer.concat(chunks);
     return buffer;
+  }
+
+  async deleteFile(fileId) {
+    if (!fileId) throw new BadRequestException('FileId is required');
+    const config = {
+      Key: fileId,
+      Bucket: this.bucketName,
+    };
+
+    const command = new DeleteObjectCommand(config);
+    await this.s3.send(command);
   }
 }
