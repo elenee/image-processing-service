@@ -27,16 +27,20 @@ export class AwsS3Service {
     if (!filePath || !buffer) {
       throw new BadRequestException('FileId and buffer are required fields');
     }
-    const config: any = {
-      Body: buffer,
-      Key: filePath,
-      Bucket: this.bucketName,
-    };
+    try {
+      const config: any = {
+        Body: buffer,
+        Key: filePath,
+        Bucket: this.bucketName,
+      };
 
-    const command = new PutObjectCommand(config);
-    await this.s3.send(command);
+      const command = new PutObjectCommand(config);
+      await this.s3.send(command);
 
-    return `https://${this.bucketName}.s3.amazonaws.com/${filePath}`;
+      return `https://${this.bucketName}.s3.amazonaws.com/${filePath}`;
+    } catch (error) {
+      throw new BadRequestException('failed to upload image');
+    }
   }
 
   async getFile(filId) {
@@ -83,12 +87,16 @@ export class AwsS3Service {
 
   async deleteFile(fileId) {
     if (!fileId) throw new BadRequestException('FileId is required');
-    const config = {
-      Key: fileId,
-      Bucket: this.bucketName,
-    };
+    try {
+      const config = {
+        Key: fileId,
+        Bucket: this.bucketName,
+      };
 
-    const command = new DeleteObjectCommand(config);
-    await this.s3.send(command);
+      const command = new DeleteObjectCommand(config);
+      await this.s3.send(command);
+    } catch (error) {
+      throw new BadRequestException('failed to delete image');
+    }
   }
 }

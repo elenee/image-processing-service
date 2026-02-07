@@ -1,12 +1,13 @@
 import { Type } from 'class-transformer';
-import { 
-  IsObject, 
-  IsOptional, 
-  IsNumber, 
+import {
+  IsObject,
+  IsOptional,
+  IsNumber,
   IsBoolean,
   ValidateNested,
   Min,
-  Max 
+  Max,
+  IsString,
 } from 'class-validator';
 
 class ResizeDto {
@@ -47,6 +48,34 @@ class FiltersDto {
   sepia?: boolean;
 }
 
+export class WatermarkDto {
+  @IsOptional()
+  @IsString()
+  position?:
+    | 'north'
+    | 'south'
+    | 'east'
+    | 'west'
+    | 'northeast'
+    | 'southeast'
+    | 'southwest'
+    | 'northwest'
+    | 'centre';
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  opacity?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  tiled: boolean
+
+  @IsOptional()
+  url: string
+}
+
 class TransformationsDto {
   @IsOptional()
   @ValidateNested()
@@ -83,6 +112,11 @@ class TransformationsDto {
   @ValidateNested()
   @Type(() => FiltersDto)
   filters?: FiltersDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => WatermarkDto)
+  watermark: WatermarkDto;
 }
 
 export class TransformImageDto {

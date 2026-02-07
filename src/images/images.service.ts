@@ -10,9 +10,10 @@ import { Image } from './entities/image.entity';
 import { AwsS3Service } from 'src/aws-s3/aws-s3.service';
 import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { TransformImageDto } from './dto/transform-image.dto';
-import sharp from 'sharp';
+import sharp, { gravity } from 'sharp';
 import type { FormatEnum } from 'sharp';
 import { RedisService } from 'src/redis/redis.service';
+import axios from 'axios';
 
 @Injectable()
 export class ImagesService {
@@ -27,22 +28,26 @@ export class ImagesService {
       throw new BadRequestException('File is required');
     }
 
-    const ext = file.mimetype.split('/')[1];
-    const fileId = `image-processing-service/${userId}/${Date.now()}.${ext}`;
-    const url = await this.awsS3Service.uploadFile(fileId, file.buffer);
+    try {
+      const ext = file.mimetype.split('/')[1];
+      const fileId = `image-processing-service/${userId}/${Date.now()}.${ext}`;
+      const url = await this.awsS3Service.uploadFile(fileId, file.buffer);
 
-    const image = await this.imageModel.create({
-      userId,
-      filename: file.originalname,
-      url,
-      key: fileId,
-      size: file.size,
-      mimetype: file.mimetype,
-    });
+      const image = await this.imageModel.create({
+        userId,
+        filename: file.originalname,
+        url,
+        key: fileId,
+        size: file.size,
+        mimetype: file.mimetype,
+      });
 
-    const versionKey = `user:${userId}:version`;
-    await this.redisService.incr(versionKey);
-    return image;
+      const versionKey = `user:${userId}:version`;
+      await this.redisService.incr(versionKey);
+      return image;
+    } catch (error) {
+      throw new BadRequestException('failed to upload image');
+    }
   }
 
   async getFile(userId, imageId: string) {
@@ -103,6 +108,7 @@ export class ImagesService {
 
   async transform(userId, imageId, transformImageDto: TransformImageDto) {
     const cacheKey = `imageId:${imageId}:transformations:${JSON.stringify(transformImageDto.transformations)}`;
+    console.log(cacheKey);
     const cached = await this.redisService.get(cacheKey);
     if (cached) {
       console.log('returning from redis');
@@ -116,89 +122,137 @@ export class ImagesService {
     });
     if (!image) throw new NotFoundException('image not found');
 
-    const buffer = await this.awsS3Service.getFileBuffer(image.key);
+    try {
+      const buffer = await this.awsS3Service.getFileBuffer(image.key);
 
-    let sharpImage = sharp(buffer);
-    const { transformations } = transformImageDto;
+      let sharpImage = sharp(buffer);
+      const { transformations } = transformImageDto;
 
-    if (transformations.resize) {
-      sharpImage = sharpImage.resize(
-        transformations.resize.width,
-        transformations.resize.height,
-      );
-    }
-    if (transformations.rotate) {
-      sharpImage = sharpImage.rotate(transformations.rotate);
-    }
-    if (transformations.crop) {
-      sharpImage = sharpImage.extract({
-        left: transformations.crop.x,
-        top: transformations.crop.y,
-        width: transformations.crop.width,
-        height: transformations.crop.height,
-      });
-    }
-    if (transformations.format) {
-      const validFormats = ['jpeg', 'png', 'webp', 'gif', 'tiff', 'avif'];
+      if (transformations.resize) {
+        sharpImage = sharpImage.resize(
+          transformations.resize.width,
+          transformations.resize.height,
+        );
+      }
+      if (transformations.rotate) {
+        sharpImage = sharpImage.rotate(transformations.rotate);
+      }
+      if (transformations.crop) {
+        sharpImage = sharpImage.extract({
+          left: transformations.crop.x,
+          top: transformations.crop.y,
+          width: transformations.crop.width,
+          height: transformations.crop.height,
+        });
+      }
+      if (transformations.format) {
+        const validFormats = ['jpeg', 'png', 'webp', 'gif', 'tiff', 'avif'];
 
-      if (!validFormats.includes(transformations.format)) {
-        throw new BadRequestException('Unsupported format.');
+        if (!validFormats.includes(transformations.format)) {
+          throw new BadRequestException('Unsupported format.');
+        }
+
+        sharpImage = sharpImage.toFormat(
+          transformations.format as keyof FormatEnum,
+        );
+      }
+      if (transformations.filters?.grayscale) {
+        sharpImage = sharpImage.greyscale();
+      }
+      if (transformations.filters?.sepia) {
+        sharpImage = sharpImage.recomb([
+          [0.3588, 0.7044, 0.1368],
+          [0.299, 0.587, 0.114],
+          [0.2392, 0.4696, 0.0912],
+        ]);
       }
 
-      sharpImage = sharpImage.toFormat(
-        transformations.format as keyof FormatEnum,
+      if (transformations.flip) {
+        sharpImage = sharpImage.flip();
+      }
+      if (transformations.mirror) {
+        sharpImage = sharpImage.flop();
+      }
+
+      const format = image.mimetype.split('/')[1];
+
+      if (transformations.compress) {
+        const quality = transformations.compress;
+
+        switch (format) {
+          case 'jpeg':
+          case 'jpg':
+            sharpImage = sharpImage.jpeg({ quality });
+            break;
+          case 'png':
+            sharpImage = sharpImage.png({ quality, compressionLevel: 9 });
+            break;
+          case 'webp':
+            sharpImage = sharpImage.webp({ quality });
+            break;
+          case 'tiff':
+            sharpImage = sharpImage.tiff({ quality });
+          default:
+            break;
+        }
+      }
+
+      if (transformations.watermark) {
+        const res = axios.get(transformations.watermark.url, {
+          responseType: 'arraybuffer',
+        });
+
+        let watermarkBuffer = Buffer.from((await res).data);
+        const contentType = (await res).headers['content-type'];
+        if (!contentType || !contentType.startsWith('image/')) {
+          throw new BadRequestException('url msut be an image');
+        }
+        const metadata = await sharpImage.metadata();
+        const watermarkWidth = Math.floor(metadata.width * 0.2);
+
+        watermarkBuffer = await sharp(watermarkBuffer)
+          .resize({ width: watermarkWidth })
+          .toBuffer();
+
+        sharpImage = sharpImage.composite([
+          {
+            input: watermarkBuffer,
+            gravity: transformations.watermark.position,
+          },
+        ]);
+      }
+
+      const transformedBuffer = await sharpImage.toBuffer();
+      const finalFormat =
+        transformations.format || image.mimetype.split('/')[1];
+      const newKey = `image-processing-service/${userId}/${Date.now()}-transformed.${finalFormat}`;
+
+      const url = await this.awsS3Service.uploadFile(newKey, transformedBuffer);
+      const mimeType = transformations.format
+        ? `image/${transformations.format}`
+        : image.mimetype;
+
+      const transformedImage = await this.imageModel.create({
+        userId,
+        filename: `${image.filename}-transformed`,
+        url,
+        key: newKey,
+        size: transformedBuffer.length,
+        mimetype: mimeType,
+      });
+
+      await this.redisService.set(
+        cacheKey,
+        JSON.stringify(transformedImage.toObject()),
+        300,
+      );
+      return transformedImage;
+    } catch (error) {
+      console.error(error);
+      throw new BadRequestException(
+        `Image processing failed: ${error.message}`,
       );
     }
-    if (transformations.filters?.grayscale) {
-      sharpImage = sharpImage.greyscale();
-    }
-    if (transformations.filters?.sepia) {
-      sharpImage = sharpImage.recomb([
-        [0.3588, 0.7044, 0.1368],
-        [0.299, 0.587, 0.114],
-        [0.2392, 0.4696, 0.0912],
-      ]);
-    }
-
-    if (transformations.flip) {
-      sharpImage = sharpImage.flip();
-    }
-    if (transformations.mirror) {
-      sharpImage = sharpImage.flop();
-    }
-    if (transformations.compress) {
-      sharpImage = sharpImage.jpeg({ quality: transformations.compress });
-
-      sharpImage = sharpImage.png({
-        quality: transformations.compress,
-        compressionLevel: 9,
-      });
-    }
-
-    const transformedBuffer = await sharpImage.toBuffer();
-    const finalFormat = transformations.format || image.mimetype.split('/')[1];
-    const newKey = `image-processing-service/${userId}/${Date.now()}-transformed.${finalFormat}`;
-
-    const url = await this.awsS3Service.uploadFile(newKey, transformedBuffer);
-    const mimeType = transformations.format
-      ? `image/${transformations.format}`
-      : image.mimetype;
-
-    const transformedImage = await this.imageModel.create({
-      userId,
-      filename: `${image.filename}-transformed`,
-      url,
-      key: newKey,
-      size: transformedBuffer.length,
-      mimetype: mimeType,
-    });
-
-    await this.redisService.set(
-      cacheKey,
-      JSON.stringify(transformedImage.toObject()),
-      300,
-    );
-    return transformedImage;
   }
 
   async deleteImage(userId, imageId) {
@@ -208,9 +262,13 @@ export class ImagesService {
     });
     if (!image) throw new BadRequestException();
 
-    await this.awsS3Service.deleteFile(image.key);
-    await this.redisService.delete(`userId:${userId}:imageId:${imageId}`);
-    await this.redisService.incr(`user:${userId}:version`);
-    return 'image deleted successfully';
+    try {
+      await this.awsS3Service.deleteFile(image.key);
+      await this.redisService.delete(`userId:${userId}:imageId:${imageId}`);
+      await this.redisService.incr(`user:${userId}:version`);
+      return 'image deleted successfully';
+    } catch (error) {
+      throw new BadRequestException('failed to delete image');
+    }
   }
 }
