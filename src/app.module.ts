@@ -13,7 +13,8 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { RedisService } from './redis/redis.service';
 import { RedisModule } from './redis/redis.module';
-
+import { ImageProcessorService } from './image-processor/image-processor.service';
+import { ImageProcessorController } from './image-processor/image-processor.controller';
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { RedisModule } from './redis/redis.module';
     ImagesModule,
     RedisModule,
   ],
-  controllers: [AppController],
+  controllers: [AppController, ImageProcessorController],
   providers: [
     AppService,
     {
@@ -44,6 +45,7 @@ import { RedisModule } from './redis/redis.module';
       useClass: ThrottlerGuard,
     },
     RedisService,
+    ImageProcessorService,
   ],
 })
 export class AppModule {}
