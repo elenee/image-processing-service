@@ -55,4 +55,9 @@ export class UsersService {
     if (!user) throw new NotFoundException('User not found');
     return user;
   }
+
+  async addImage(userId, imageId){
+    const updatedUser = await this.userModel.findByIdAndUpdate(userId, {$push: {images: imageId}}, {new: true});
+    return updatedUser;
+  }
 }

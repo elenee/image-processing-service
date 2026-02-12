@@ -69,10 +69,6 @@ export class WatermarkDto {
   opacity?: number;
 
   @IsOptional()
-  @IsBoolean()
-  tiled: boolean
-
-  @IsOptional()
   url: string
 }
 

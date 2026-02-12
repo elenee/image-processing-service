@@ -6,6 +6,7 @@ import { ImageSchema } from './entities/image.entity';
 import { AwsS3Module } from 'src/aws-s3/aws-s3.module';
 import { ClientsModule } from '@nestjs/microservices';
 import { rabbitMQConfig } from 'src/config/rabbitmq.options';
+import { UsersModule } from 'src/users/users.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { rabbitMQConfig } from 'src/config/rabbitmq.options';
         ...rabbitMQConfig(),
       },
     ]),
+    UsersModule
   ],
   controllers: [ImagesController],
   providers: [ImagesService],

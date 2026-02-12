@@ -18,9 +18,6 @@ export class Image {
   @Prop()
   mimetype: string;
 
-  @Prop({ type: Array, default: [] })
-  transformations: any[];
-
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
   userId: mongoose.Schema.Types.ObjectId;
 }

@@ -64,7 +64,7 @@ export class ImageProcessorService {
         });
       }
       if (transformations.format) {
-        const validFormats = ['jpeg', 'png', 'webp', 'gif', 'tiff', 'avif'];
+        const validFormats = ['jpeg', 'png', 'webp', 'tiff', 'avif'];
 
         if (!validFormats.includes(transformations.format)) {
           throw new BadRequestException('Unsupported format.');
@@ -74,6 +74,7 @@ export class ImageProcessorService {
           transformations.format as keyof FormatEnum,
         );
       }
+
       if (transformations.filters?.grayscale) {
         sharpImage = sharpImage.greyscale();
       }
@@ -116,33 +117,42 @@ export class ImageProcessorService {
       }
 
       if (transformations.watermark) {
-        const res = axios.get(transformations.watermark.url, {
+        const res = await axios.get(transformations.watermark.url, {
           responseType: 'arraybuffer',
         });
 
-        let watermarkBuffer = Buffer.from((await res).data);
-        const contentType = (await res).headers['content-type'];
+        let watermarkBuffer = res.data;
+        const contentType = res.headers['content-type'];
+        
         if (!contentType || !contentType.startsWith('image/')) {
-          throw new BadRequestException('url msut be an image');
+          throw new BadRequestException('url must be an image');
         }
         const metadata = await sharpImage.metadata();
-        const watermarkWidth = Math.floor(metadata.width * 0.2);
+        const watermarkWidth = Math.floor(metadata.width || 100) * 0.01;
 
-        watermarkBuffer = await sharp(watermarkBuffer)
-          .resize({ width: watermarkWidth })
-          .toBuffer();
+        watermarkBuffer = await sharp(Buffer.from((await res).data)).resize({
+          width: watermarkWidth,
+        });
+
+        if (transformations.watermark.opacity) {
+          const opacity = transformations.watermark.opacity / 100;
+          watermarkBuffer = watermarkBuffer.ensureAlpha(opacity);
+        }
+
+        const finalWatermarkBuffer = await watermarkBuffer.toBuffer();
 
         sharpImage = sharpImage.composite([
           {
-            input: watermarkBuffer,
+            input: finalWatermarkBuffer,
             gravity: transformations.watermark.position,
+            blend: 'over',
           },
         ]);
       }
 
       const transformedBuffer = await sharpImage.toBuffer();
-      const finalFormat =
-        transformations.format || image.mimetype.split('/')[1];
+      const finalFormat = transformations.format || image.mimetype.split('/')[1];
+
       const newKey = `image-processing-service/${userId}/${Date.now()}-transformed.${finalFormat}`;
 
       const url = await this.awsS3Service.uploadFile(newKey, transformedBuffer);

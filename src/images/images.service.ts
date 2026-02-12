@@ -13,6 +13,7 @@ import { PaginationQueryDto } from './dto/pagination-query.dto';
 import { TransformImageDto } from './dto/transform-image.dto';
 import { RedisService } from 'src/redis/redis.service';
 import { ClientProxy } from '@nestjs/microservices';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class ImagesService {
@@ -20,6 +21,7 @@ export class ImagesService {
     @InjectModel('Image') private imageModel: Model<Image>,
     private awsS3Service: AwsS3Service,
     private redisService: RedisService,
+    private usersService: UsersService,
     @Inject('RABBITMQ_SERVICE') private rabbitClient: ClientProxy,
   ) {}
 
@@ -41,6 +43,8 @@ export class ImagesService {
         size: file.size,
         mimetype: file.mimetype,
       });
+
+      await this.usersService.addImage(userId, image._id);
 
       const versionKey = `user:${userId}:version`;
       await this.redisService.incr(versionKey);
