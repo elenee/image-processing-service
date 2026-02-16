@@ -174,6 +174,10 @@ RabbitMQ Management UI: http://localhost:15672 (guest/guest)
 - Rate limiting to prevent abuse
 - Environment variables for sensitive data
 
+## 🙏 Acknowledgments
+
+This project was inspired by the [Image Processing Service project](https://roadmap.sh/projects/image-processing-service) from roadmap.sh.
+
 ## 👤 Author
 
 [elenee](https://github.com/elenee)
