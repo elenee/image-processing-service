@@ -1,98 +1,185 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+Image Processing Service
+A production-ready microservice for image processing built with NestJS, similar to Cloudinary. Features user authentication, cloud storage, asynchronous processing, and intelligent caching.
+***
+🚀 Features
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+User Authentication: JWT-based authentication with secure password hashing
+Image Upload: Upload images to AWS S3 with automatic metadata storage
+Image Transformations:
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Basic: Resize, Crop, Rotate, Flip, Mirror
+Advanced: Format conversion, Compression, Filters (Grayscale, Sepia)
 
-## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Async Processing: Background job processing with RabbitMQ
 
-## Project setup
+Intelligent Caching: Redis-based caching with smart invalidation
 
-```bash
-$ npm install
-```
+Rate Limiting: Configurable throttling to prevent abuse
 
-## Compile and run the project
+Pagination: Efficient pagination for image listings
 
-```bash
-# development
-$ npm run start
+RESTful API: Clean, well-structured REST endpoints
 
-# watch mode
-$ npm run start:dev
+***
 
-# production mode
-$ npm run start:prod
-```
+🛠️ Tech Stack
 
-## Run tests
+Framework: NestJS 11
 
-```bash
-# unit tests
-$ npm run test
+Language: TypeScript
 
-# e2e tests
-$ npm run test:e2e
+Database: MongoDB (Mongoose ODM)
 
-# test coverage
-$ npm run test:cov
-```
+Cache: Redis (ioredis)
 
-## Deployment
+Message Queue: RabbitMQ (AMQP)
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Storage: AWS S3
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Image Processing: Sharp
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
+Authentication: JWT + Bcrypt
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Validation: class-validator, class-transformer
 
-## Resources
+Rate Limiting: @nestjs/throttler
 
-Check out a few resources that may come in handy when working with NestJS:
+***
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+📋 Prerequisites
+Before running this application, ensure you have:
 
-## Support
+Node.js (v18 or higher)
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+npm or yarn
 
-## Stay in touch
+MongoDB (local or MongoDB Atlas)
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+Docker (for Redis and RabbitMQ)
 
-## License
+AWS Account (for S3 bucket)
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+***
+
+🔧 Installation
+1. Clone the repository
+bashgit clone <your-repo-url>
+cd image-processing-service
+2. Install dependencies
+bashnpm install
+3. Set up environment variables
+Create a .env file in the root directory:
+env# MongoDB
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/?appName=Cluster0
+
+# JWT
+JWT_SECRET=your_jwt_secret_key
+
+# AWS S3
+aws_access_key=YOUR_AWS_ACCESS_KEY
+aws_secret_access_key=YOUR_AWS_SECRET_KEY
+AWS_BUCKET_NAME=your-bucket-name
+AWS_REGION=your-region
+
+# Redis
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+
+# RabbitMQ
+RABBITMQ_URL=amqp://localhost:5672
+
+***
+Start Docker services
+Redis:
+bashdocker run -d -p 6379:6379 --restart unless-stopped --name redis-cache redis
+RabbitMQ:
+bashdocker run -d -p 5672:5672 -p 15672:15672 --name rabbitmq rabbitmq:3-management
+Verify services are running:
+bashdocker ps
+
+🚀 Running the Application
+
+
+Development mode
+bashnpm run start:dev
+
+Production mode
+
+bashnpm run build
+
+npm run start:prod
+
+The application will be available at http://localhost:3000
+
+## 🎯 Architecture Overview
+
+Client Request
+    ↓
+NestJS API (Port 3000)
+    ↓
+├── Authentication (JWT)
+├── Upload → AWS S3
+├── Transform → RabbitMQ Queue → Background Worker
+├── Cache → Redis
+└── Database → MongoDB
+
+**Key Design Decisions:**
+- **Asynchronous Processing**: Transformations sent to RabbitMQ for background processing
+- **Caching Strategy**: Redis with smart invalidation using version keys
+- **Modular Architecture**: Separation of concerns for maintainability
+
+Services:
+
+API: http://localhost:3000
+
+RabbitMQ Management UI: http://localhost:15672 (guest/guest)
+
+## 📦 Available Transformations
+
+| Transformation | Description | Example |
+|---------------|-------------|---------|
+| **Resize** | Change dimensions | `{ width: 800, height: 600 }` |
+| **Crop** | Extract portion | `{ width: 500, height: 500, x: 0, y: 0 }` |
+| **Rotate** | Rotate by degrees | `90` |
+| **Flip** | Flip vertically | `true` |
+| **Mirror** | Flip horizontally | `true` |
+| **Format** | Convert format | `"png"`, `"jpeg"`, `"webp"` |
+| **Compress** | Adjust quality | `80` (1-100) |
+| **Filters** | Grayscale, Sepia | `{ grayscale: true }` |
+
+## ⚙️ Configuration
+
+**Rate Limiting:**
+- Global: 100 requests/minute
+- Image Upload: 10 uploads/minute  
+- Image Transform: 5 transforms/minute
+
+**Caching TTL:**
+- Image Lists: 5 minutes
+- Single Image: 10 minutes
+- Transformed Images: 24 hours
+
+**File Upload Limits:**
+- Max size: 10MB
+- Formats: PNG, JPEG, JPG, GIF, WEBP, BMP, TIFF
+
+
+## 🔒 Security Features
+
+- Password hashing with bcrypt
+- JWT-based stateless authentication
+- User ownership verification
+- File type and size validation
+- Rate limiting to prevent abuse
+- Environment variables for sensitive data
+
+## 🙏 Acknowledgments
+
+This project was inspired by the [Image Processing Service project](https://roadmap.sh/projects/image-processing-service) from roadmap.sh.
+
+## 👤 Author
+
+[elenee](https://github.com/elenee)
+***
+⭐ If you found this project helpful, please consider giving it a star!
